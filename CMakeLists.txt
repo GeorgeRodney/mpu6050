@@ -25,6 +25,9 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico_w CACHE STRING "Board type")
 
+# Find the Eigen3 package
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
@@ -54,4 +57,4 @@ pico_enable_stdio_uart(accel 0)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(accel)
 
-# call pico_set_program_url to set path to example on github, so users can find the source for an example via picotool
+target_include_directories(accel PRIVATE ${EIGEN3_INCLUDE_DIR})

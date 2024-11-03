@@ -40,17 +40,6 @@ int main()
         sleep_ms(500);
         operate_indicator_.set(true);
         sleep_ms(500);
-
-        printf("GYRO DATA X: %f\n", mpu6050_.gyroData_[0]);
-        printf("GYRO DATA Y: %f\n", mpu6050_.gyroData_[1]);
-        printf("GYRO DATA Z: %f\n", mpu6050_.gyroData_[2]);
-        printf("\n");
-        printf("ACCEL DATA X: %f\n", mpu6050_.accelData_[0]);
-        printf("ACCEL DATA Y: %f\n", mpu6050_.accelData_[1]);
-        printf("ACCEL DATA Z: %f\n", mpu6050_.accelData_[2]);
-        printf("\n\n");
-
-        sleep_ms(100);
     }
 
 }

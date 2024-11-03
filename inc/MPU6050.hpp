@@ -146,8 +146,9 @@ public:
         read_accelerometer();
         read_gyroscope();
 
-        printf("Accel: X: %d, Y: %d, Z: %d\n", accelData_[0], accelData_[1], accelData_[2]);
-        printf("Gyro: X: %d, Y: %d, Z: %d\n", gyroData_[0], gyroData_[1], gyroData_[2]);
+        printf("Accel: X: %f, Y: %f, Z: %f\n", accelData_[0], accelData_[1], accelData_[2]);
+        printf("Gyro: X: %f, Y: %f, Z: %f\n", gyroData_[0], gyroData_[1], gyroData_[2]);
+        printf("\n\n");
     }
 
     int sdaPin_;
