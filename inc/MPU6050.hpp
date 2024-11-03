@@ -16,11 +16,12 @@ public:
         gyroOffset_{0.0f, 0.0f, 0.0f},
         accelData_{0.0f, 0.0f, 0.0f},
         gyroData_{0.0f, 0.0f, 0.0f},
+        MEAS_PERIOD(100),
         WHO_AM_I(0x75),
         ACCEL_REG(0x3B),
         GYRO_REG(0x43)
     {
-        add_repeating_timer_ms(100, static_timer_callback, this, &timer_);
+        add_repeating_timer_ms(MEAS_PERIOD, static_timer_callback, this, &timer_);
 
         i2c_init(i2cPort_, 400*1000);
         gpio_set_function(sdaPin_, GPIO_FUNC_I2C);
@@ -158,7 +159,8 @@ public:
     float gyroData_[3];
     repeating_timer_t timer_;
     
-    // Addresses 
+    // Addresses
+    const uint16_t MEAS_PERIOD;
     const uint8_t WHO_AM_I;
     const uint8_t ACCEL_REG;
     const uint8_t GYRO_REG;
