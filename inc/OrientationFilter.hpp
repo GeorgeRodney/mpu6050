@@ -13,7 +13,8 @@ class OrientationFilter
 
     void update(float measNoise);
 
-    Eigen::Matrix<double, 7, 1> state_;
+    Eigen::Matrix<double, 7, 1> predState_;
+    Eigen::Matrix<double, 7, 1> estState_;
     Eigen::Quaterniond tempQuat_;
     
 };
