@@ -7,8 +7,8 @@ OrientationFilter::OrientationFilter():
     pred_Var_(Eigen::MatrixXd::Zero(STATE_SIZE,STATE_SIZE)),
     est_Var_(Eigen::MatrixXd::Zero(STATE_SIZE,STATE_SIZE)),
     lambda_(0.0),
-    W_mean_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f),
-    W_cov_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f),
+    W_mean_(Eigen::MatrixXd::Zero(15,1)),
+    W_cov_(Eigen::MatrixXd::Zero(15,1)),
     angular_velocity_noise_var(5.0),
     angular_velocity_noise_stddev(std::sqrt(angular_velocity_noise_var))
 {
@@ -28,14 +28,16 @@ OrientationFilter::OrientationFilter():
     est_Var_(5,5) = 1;
     est_Var_(6,6) = 1;
 
-    std::normal_distribution<float> noise_dist(0.0, angular_velocity_noise_stddev);
-
+    std::normal_distribution<double> noise_dist(0.0, angular_velocity_noise_stddev);
+    // W_mean_.setZero();
+    // W_cov_.setZero();
 }
 
-void OrientationFilter::predict(float dt)
+void OrientationFilter::predict(double dt)
 {   
     // GENERATE SIGMA POINTS
     calcWeights();
+
     Eigen::MatrixXd sigma(Eigen::MatrixXd::Zero(STATE_SIZE,15));
     Eigen::MatrixXd sigma_prime(Eigen::MatrixXd::Zero(STATE_SIZE,15));
     sigma.col(0) = estState_; 
@@ -43,7 +45,7 @@ void OrientationFilter::predict(float dt)
     // est_Var_ = sqrt_P * sqrt_P.Transpose()
     // therefore, sqrt_P is essentially the square root of the variance matrix
     Eigen::MatrixXd sqrt_P = est_Var_.llt().matrixL();
-    float scaleFactor = std::sqrt(STATE_SIZE + lambda_);   
+    double scaleFactor = std::sqrt(STATE_SIZE + lambda_);   
 
     for (uint16_t posIdx = 1; posIdx <= 7; ++posIdx)
     {   
@@ -92,29 +94,28 @@ void OrientationFilter::predict(float dt)
         sigma_prime.col(col)(2) = newQ.y();
         sigma_prime.col(col)(3) = newQ.z();
 
-        float noise_wx = noise_dist(gen);
-        float noise_wy = noise_dist(gen);
-        float noise_wz = noise_dist(gen);
+        double noise_wx = noise_dist(gen);
+        double noise_wy = noise_dist(gen);
+        double noise_wz = noise_dist(gen);
 
         sigma_prime(4, col) = sigma(4, col) + noise_wx * dt; // Angular velocity x component
         sigma_prime(5, col) = sigma(5, col) + noise_wy * dt; // Angular velocity y component
         sigma_prime(6, col) = sigma(6, col) + noise_wz * dt; // Angular velocity z component
     }
 
-
-
-    // PREDICT VARIANCE 
+    // CALCULATE WEIGHTED PREDICTED STATE
+     
 }
 
-void OrientationFilter::update(float measNoise)
+void OrientationFilter::update(double measNoise)
 {
 }
 
 void OrientationFilter::calcWeights()
 {
-    float alpha = 1e-3;
-    float beta = 2.0;
-    float kappa = 0.0;
+    double alpha = 1e-3;
+    double beta = 2.0;
+    double kappa = 0.0;
 
     // Calculate lambda
     lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
