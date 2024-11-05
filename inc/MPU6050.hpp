@@ -3,6 +3,7 @@
 #include "pico/binary_info.h"
 #include <stdio.h>
 #include "hardware/timer.h"
+#include <Eigen/Dense>
 
 class imu
 {   
@@ -145,10 +146,17 @@ public:
     {
         read_accelerometer();
         read_gyroscope();
+        uint64_t read_time = to_ms_since_boot(get_absolute_time());
 
-        printf("Accel: X: %f, Y: %f, Z: %f\n", accelData_[0], accelData_[1], accelData_[2]);
-        printf("Gyro: X: %f, Y: %f, Z: %f\n", gyroData_[0], gyroData_[1], gyroData_[2]);
-        printf("\n\n");
+        measMessage_.block<3,1>(0,0) << accelData_[0], accelData_[1], accelData_[2];
+        measMessage_.block<3,1>(3,0) << gyroData_[0], gyroData_[1], gyroData_[2];
+        measMessage_.block<1,1>(6,0) << read_time;
+
+        // printf("Time: %d\n", read_time);
+        // printf("Accel: X: %f, Y: %f, Z: %f\n", accelData_[0], accelData_[1], accelData_[2]);
+        // printf("Gyro: X: %f, Y: %f, Z: %f\n", gyroData_[0], gyroData_[1], gyroData_[2]);
+        // printf("measMessage: accelX: %f, accelY: %f, accelZ: %f, gyroX: %f, gyroY: %f, gyroZ: %f, time: %d\n", measMessage_[0], measMessage_[1], measMessage_[2], measMessage_[3], measMessage_[4], measMessage_[5], measMessage_[6]);
+        // printf("\n\n");
     }
 
     int sdaPin_;
@@ -159,6 +167,7 @@ public:
     float accelData_[3];
     float gyroData_[3];
     repeating_timer_t timer_;
+    Eigen::Matrix<float, 7, 1> measMessage_;
     
     // Addresses
     const uint16_t MEAS_PERIOD;

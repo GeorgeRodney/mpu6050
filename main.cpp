@@ -1,6 +1,7 @@
 #include "led.hpp"
 #include "MPU6050.hpp"
 #include "hardware/timer.h"
+#include "OrientationFilter.hpp"
 #include <stdio.h>
 #include <cstdlib>
 
@@ -15,12 +16,14 @@ int main()
 {
     stdio_init_all();
 
+    OrientationFilter ukfFilter_;
+
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
     operate_indicator_.set(true);
 
     imu mpu6050_(GPIO_4, GPIO_5, i2c_default, MPU_ADDRESS);
-    sleep_ms(10);
+    sleep_ms(10000);
 
     // Validate IMU
     uint8_t mpu_ID = mpu6050_.who_are_you();
@@ -33,6 +36,8 @@ int main()
 
     // CALIBRATIING
     mpu6050_.calibrate_gyroscope();
+
+    ukfFilter_.predict(1.0);
 
     while(1)
     {
