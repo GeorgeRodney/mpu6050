@@ -12,6 +12,11 @@
 #define OPERATE_GPIO 16
 #define MPU_ADDRESS 0x68
 
+double get_time()
+{
+    return time_us_64() / 1e6;
+}
+
 int main()
 {
     stdio_init_all();
@@ -34,17 +39,28 @@ int main()
         std::exit(EXIT_FAILURE);
     }
 
-    // CALIBRATIING
+    // SETUP
     mpu6050_.calibrate_gyroscope();
+    ukfFilter_.calcWeights();
+    ukfFilter_.currentTime_ = get_time();
 
-    ukfFilter_.predict(1.0);
-
-    while(1)
+    while(true)
     {
-        operate_indicator_.set(false);
-        sleep_ms(500);
-        operate_indicator_.set(true);
-        sleep_ms(500);
+        // What time is it
+        ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
+        ukfFilter_.currentTime_ = get_time();
+        ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
+
+        // Predict State Forward DT
+        ukfFilter_.predict(ukfFilter_.dt_);
+        ukfFilter_.predictMeasurement();
+
+        // Measure and innovate
+        mpu6050_.read_gyroscope();
+        ukfFilter_.calculateInnovation(mpu6050_.gyroData_);
+
+        // Update State
+        ukfFilter_.update();
     }
 
 }

@@ -2,15 +2,28 @@
 
 
 OrientationFilter::OrientationFilter():
-    predState_{0.0f, 1.0f, 0.0f, 0.0f, 3.0f, 3.0f, 3.0f},
-    estState_{0.0f, 1.0f, 0.0f, 0.0f, 3.0f, 3.0f, 3.0f},
+    pred_State_(7),
+    est_State_(7),
+    innovation_(3),
     pred_Var_(Eigen::MatrixXd::Zero(STATE_SIZE,STATE_SIZE)),
     est_Var_(Eigen::MatrixXd::Zero(STATE_SIZE,STATE_SIZE)),
+    innovation_Var_(Eigen::MatrixXd::Zero(MEAS_SIZE,MEAS_SIZE)),
+    pred_Meas_(7),
+    est_Meas_(7),
     lambda_(0.0),
     W_mean_(Eigen::MatrixXd::Zero(15,1)),
     W_cov_(Eigen::MatrixXd::Zero(15,1)),
+    state_meas_cov_(Eigen::MatrixXd::Zero(STATE_SIZE,MEAS_SIZE)),
+    K(Eigen::MatrixXd::Zero(STATE_SIZE,MEAS_SIZE)),
+    predicted_sigma_(Eigen::MatrixXd::Zero(STATE_SIZE,15)),
+    measurement_sigma_(Eigen::MatrixXd::Zero(MEAS_SIZE,15)),
+    measurement_Var_(Eigen::MatrixXd::Zero(MEAS_SIZE,MEAS_SIZE)),
+    currentTime_(0.0),
+    lastTime_(0.0),
+    dt_(0.0),
     angular_velocity_noise_var(5.0),
-    angular_velocity_noise_stddev(std::sqrt(angular_velocity_noise_var))
+    angular_velocity_noise_stddev(std::sqrt(angular_velocity_noise_var)),
+    measurement_noise_matrix_(Eigen::MatrixXd::Zero(MEAS_SIZE,MEAS_SIZE))
 {
     pred_Var_(0,0) = 0.1;
     pred_Var_(1,1) = 0.1;
@@ -29,59 +42,56 @@ OrientationFilter::OrientationFilter():
     est_Var_(6,6) = 1;
 
     std::normal_distribution<double> noise_dist(0.0, angular_velocity_noise_stddev);
-    // W_mean_.setZero();
-    // W_cov_.setZero();
+
+    measurement_noise_matrix_(0,0) = angular_velocity_noise_var;
+    measurement_noise_matrix_(1,1) = angular_velocity_noise_var;
+    measurement_noise_matrix_(2,2) = angular_velocity_noise_var;
 }
 
 void OrientationFilter::predict(double dt)
 {   
-    // GENERATE SIGMA POINTS
-    calcWeights();
-
     Eigen::MatrixXd sigma(Eigen::MatrixXd::Zero(STATE_SIZE,15));
     Eigen::MatrixXd sigma_prime(Eigen::MatrixXd::Zero(STATE_SIZE,15));
-    sigma.col(0) = estState_; 
+    Eigen::Quaterniond estQuat;
+    Eigen::Quaterniond deltaQ;
+    Eigen::Quaterniond newQ;
 
-    // est_Var_ = sqrt_P * sqrt_P.Transpose()
-    // therefore, sqrt_P is essentially the square root of the variance matrix
     Eigen::MatrixXd sqrt_P = est_Var_.llt().matrixL();
+
     double scaleFactor = std::sqrt(STATE_SIZE + lambda_);   
 
-    for (uint16_t posIdx = 1; posIdx <= 7; ++posIdx)
+    // GENERATE SIGMA POINTS
+    sigma.col(0) = est_State_; 
+    for (uint16_t posIdx = 1; posIdx <= STATE_SIZE; ++posIdx)
     {   
         for (uint16_t row = 0; row < STATE_SIZE; ++row)
         {
-            sigma(row, posIdx) = estState_(row) + scaleFactor * sqrt_P(row, row);
-            printf("sigma(%d,%d): %f", row, posIdx, sigma(row, posIdx));
-            printf("\n");
+            sigma(row, posIdx) = est_State_(row) + scaleFactor * sqrt_P(row, row);
+            // printf("sigma(%d,%d): %f", row, posIdx, sigma(row, posIdx));
+            // printf("\n");
         }
     }
 
-    printf("\n\n\n");
-
-    for (uint16_t negIdx = 8; negIdx <= 14; ++negIdx)
+    for (uint16_t negIdx = STATE_SIZE+1; negIdx <= 2*STATE_SIZE; ++negIdx)
     {
         for (uint16_t row = 0; row < STATE_SIZE; ++row)
         {
-            sigma(row, negIdx) = estState_(row) - scaleFactor * sqrt_P(row, row);
-            printf("sigma(%d,%d): %f", row, negIdx, sigma(row, negIdx)); 
-            printf("\n");  
+            sigma(row, negIdx) = est_State_(row) - scaleFactor * sqrt_P(row, row);
+            // printf("sigma(%d,%d): %f", row, negIdx, sigma(row, negIdx)); 
+            // printf("\n");  
         }
     }
 
     // PROPOGATE SIGMA THROUGH TRANSFORM
-    Eigen::Quaterniond estQuat;
-    estQuat.w() = estState_(0);
-    estQuat.x()= estState_(1);
-    estQuat.y() = estState_(2);
-    estQuat.z() = estState_(3);
+    estQuat.w() = est_State_(0);
+    estQuat.x() = est_State_(1);
+    estQuat.y() = est_State_(2);
+    estQuat.z() = est_State_(3);
 
-    for (uint16_t col = 0; col < 15; ++col)
+    for (uint16_t col = 0; col < (2*STATE_SIZE+1); ++col)
     {
         // Normalize the quat
         sigma.col(col).head(4).normalize();
-        Eigen::Quaterniond deltaQ;
-        Eigen::Quaterniond newQ;
         
         deltaQ.w() = 1.0;
         deltaQ.x() = 0.5 * sigma(4, col) * dt;
@@ -102,24 +112,134 @@ void OrientationFilter::predict(double dt)
         sigma_prime(5, col) = sigma(5, col) + noise_wy * dt; // Angular velocity y component
         sigma_prime(6, col) = sigma(6, col) + noise_wz * dt; // Angular velocity z component
     }
+    predicted_sigma_ = sigma_prime;
 
-    // CALCULATE WEIGHTED PREDICTED STATE
-     
+    // PREDICT STATE VECTOR
+    pred_State_.setZero();
+    for (uint16_t sigmaIdx = 0; sigmaIdx < (2*STATE_SIZE+1); ++sigmaIdx)
+    {
+        pred_State_ += W_mean_(sigmaIdx) * sigma_prime.col(sigmaIdx);
+    }
+
+    // PREDICT COVARIANCE MATRIX
+    pred_Var_.setZero();
+    for (int idx = 0; idx < 15; ++idx)
+    {
+        Eigen::VectorXd diff = sigma_prime.col(idx) - pred_State_;
+        pred_Var_ += W_cov_(idx) * (diff * diff.transpose());
+    }
 }
 
-void OrientationFilter::update(double measNoise)
+// >-----------------------------------------------------------------------------------
+//  Predict the measurement.
+//  Inputs: Predicted State. Predicted Covariance.
+//  Outputs: Predicted measurement state
+// >-----------------------------------------------------------------------------------
+
+void OrientationFilter::predictMeasurement()
 {
+    Eigen::MatrixXd sigma(Eigen::MatrixXd::Zero(STATE_SIZE,15));
+    Eigen::MatrixXd sigma_prime(Eigen::MatrixXd::Zero(MEAS_SIZE,15));
+        
+    Eigen::MatrixXd sqrt_P = pred_Var_.llt().matrixL();
+
+    double scaleFactor = std::sqrt(STATE_SIZE + lambda_);   
+
+    // GENERATE SIGMA POINTS
+    sigma.col(0) = pred_State_; 
+    for (uint16_t posIdx = 1; posIdx <= STATE_SIZE; ++posIdx)
+    {   
+        for (uint16_t row = 0; row < STATE_SIZE; ++row)
+        {
+            sigma(row, posIdx) = pred_State_(row) + scaleFactor * sqrt_P(row, row);
+            // printf("sigma(%d,%d): %f", row, posIdx, sigma(row, posIdx));
+            // printf("\n");
+        }
+    }
+
+    for (uint16_t negIdx = STATE_SIZE+1; negIdx <= 2*STATE_SIZE; ++negIdx)
+    {
+        for (uint16_t row = 0; row < STATE_SIZE; ++row)
+        {
+            sigma(row, negIdx) = pred_State_(row) - scaleFactor * sqrt_P(row, row);
+            // printf("sigma(%d,%d): %f", row, negIdx, sigma(row, negIdx)); 
+            // printf("\n");  
+        }
+    }
+
+    // PROPOGATE SIGMA THROUGH TRANSFORM
+    for (uint16_t col = 0; col < (2*STATE_SIZE+1); ++col)
+    {
+        sigma_prime(0, col) = sigma(0, col);
+        sigma_prime(1, col) = sigma(1, col);
+        sigma_prime(2, col) = sigma(2, col);
+    }
+
+    measurement_sigma_ = sigma_prime;
+
+    // PREDICT MEAS VECTOR
+    pred_Meas_.setZero();
+    for (uint16_t sigmaIdx = 0; sigmaIdx < (2*STATE_SIZE+1); ++sigmaIdx)
+    {
+        pred_Meas_ += W_mean_(sigmaIdx) * sigma_prime.col(sigmaIdx);
+    }
+
+    // PREDICT INNOVATION COVARIANCE
+    innovation_Var_.setZero();
+    for (int idx = 0; idx < 15; ++idx)
+    {
+        Eigen::VectorXd diff = sigma_prime.col(idx) - pred_Meas_;
+        innovation_Var_ += W_cov_(idx) * (diff * diff.transpose());
+    }
+}
+
+void OrientationFilter::calculateInnovation(const float gyroMeasIn[3])
+{
+    for (uint8_t idx = 0; idx < MEAS_SIZE; ++idx)
+    {
+        innovation_(idx) = gyroMeasIn[idx] - pred_Meas_(idx);
+    }
+}
+
+void OrientationFilter::update()
+{  
+    // State and measurement covariance
+    state_meas_cov_.setZero();
+    for (int idx = 0; idx < 15; ++idx)
+    {   
+        Eigen::VectorXd diffState = predicted_sigma_.col(idx) - pred_State_;
+        Eigen::VectorXd diffMeas = measurement_sigma_.col(idx) - pred_Meas_;
+        state_meas_cov_ += W_cov_(idx) * (diffState * diffMeas.transpose());
+    }
+
+    measurement_Var_.setZero();
+    for (int idx = 0; idx < 15; ++idx)
+    {   
+        Eigen::VectorXd diffMeas = measurement_sigma_.col(idx) - pred_Meas_;
+        measurement_Var_ += W_cov_(idx) * (diffMeas * diffMeas.transpose());
+    }
+
+    measurement_Var_ += measurement_noise_matrix_;
+
+    // K = P_xz * S_inv
+    K = state_meas_cov_ * measurement_Var_.inverse();
+    
+    // X(+) = X(-) + K * innovation
+    est_State_ = pred_State_ + K * innovation_;
+
+    // P(+) = P(-) - K * S * K_t
+    est_Var_ = pred_Var_ - K * measurement_Var_ *  K.transpose();
 }
 
 void OrientationFilter::calcWeights()
 {
-    double alpha = 1e-3;
-    double beta = 2.0;
-    double kappa = 0.0;
+    double alpha = 1.0;
+    double beta = 0.0;
+    double kappa = 3 - STATE_SIZE;
 
     // Calculate lambda
     lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
-    printf("Lamda: %f", lambda_);
+    printf("lambda: %f\n", lambda_);
 
     // Compute weights
     W_mean_(0) = lambda_ / (STATE_SIZE + lambda_);
@@ -128,5 +248,6 @@ void OrientationFilter::calcWeights()
     for (int i = 1; i < 2 * STATE_SIZE + 1; ++i) {
         W_mean_(i) = 1.0 / (2 * (STATE_SIZE + lambda_));
         W_cov_(i) = 1.0 / (2 * (STATE_SIZE + lambda_));
+        printf("W_mean: %f\n", W_mean_(i));
     }
 }

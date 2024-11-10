@@ -22,7 +22,8 @@ public:
         ACCEL_REG(0x3B),
         GYRO_REG(0x43)
     {
-        add_repeating_timer_ms(MEAS_PERIOD, static_timer_callback, this, &timer_);
+        // This line will call static_timer_callback() and will produce a gyro reading at the MEAS_PERIOD
+        // add_repeating_timer_ms(MEAS_PERIOD, static_timer_callback, this, &timer_);
 
         i2c_init(i2cPort_, 400*1000);
         gpio_set_function(sdaPin_, GPIO_FUNC_I2C);
