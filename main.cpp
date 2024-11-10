@@ -25,11 +25,10 @@ int main()
 
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
-    operate_indicator_.set(true);
+    operate_indicator_.set(false);
 
     imu mpu6050_(GPIO_4, GPIO_5, i2c_default, MPU_ADDRESS);
-    sleep_ms(10000);
-
+    
     // Validate IMU
     uint8_t mpu_ID = mpu6050_.who_are_you();
     if(mpu_ID != MPU_ADDRESS)
@@ -47,6 +46,7 @@ int main()
     while(true)
     {
         // What time is it
+        operate_indicator_.set(true);
         ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
         ukfFilter_.currentTime_ = get_time();
         ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
@@ -54,7 +54,7 @@ int main()
         // Predict State Forward DT
         ukfFilter_.predict(ukfFilter_.dt_);
         ukfFilter_.predictMeasurement();
-
+        operate_indicator_.set(true);
         // Measure and innovate
         mpu6050_.read_gyroscope();
         ukfFilter_.calculateInnovation(mpu6050_.gyroData_);
@@ -62,7 +62,10 @@ int main()
         // Update State
         ukfFilter_.update();
 
-        printf("%.4f,%.4f,%.4f,%.4f\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
+        printf("%.4d,%.4d,%.4d,%.4d\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
+
+        operate_indicator_.set(false);
+        sleep_ms(1000);
     }
 
 }
