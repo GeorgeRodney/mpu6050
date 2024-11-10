@@ -61,6 +61,8 @@ int main()
 
         // Update State
         ukfFilter_.update();
+
+        printf("%.4f,%.4f,%.4f,%.4f\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
     }
 
 }
