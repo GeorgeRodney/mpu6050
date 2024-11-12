@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+# set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 
 # Initialise pico_sdk from installed location
@@ -61,3 +61,8 @@ pico_enable_stdio_uart(accel 0)
 pico_add_extra_outputs(accel)
 
 target_include_directories(accel PRIVATE ${EIGEN3_INCLUDE_DIR})
+
+# Disable annoying cmake warning
+# Disable specific warning in GCC
+target_compile_options(accel PRIVATE -Wno-psabi)
+

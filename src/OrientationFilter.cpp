@@ -46,6 +46,9 @@ OrientationFilter::OrientationFilter():
     measurement_noise_matrix_(0,0) = angular_velocity_noise_var;
     measurement_noise_matrix_(1,1) = angular_velocity_noise_var;
     measurement_noise_matrix_(2,2) = angular_velocity_noise_var;
+
+    pred_State_ << 1, 1, 0, 0, 0, 0, 0;
+    est_State_ << 1, 1, 0, 0, 0, 0, 0;
 }
 
 void OrientationFilter::predict(double dt)
@@ -82,6 +85,16 @@ void OrientationFilter::predict(double dt)
         }
     }
 
+    printf("Sigma\n");
+    for (uint16_t row = 0; row < STATE_SIZE; ++row)
+    {
+        for (uint16_t col = 0; col < 2*STATE_SIZE+1; ++col)
+        {
+            printf("%d, ", sigma(row,col));
+        }
+        printf("\n");
+    }
+
     // PROPOGATE SIGMA THROUGH TRANSFORM
     estQuat.w() = est_State_(0);
     estQuat.x() = est_State_(1);
@@ -112,6 +125,17 @@ void OrientationFilter::predict(double dt)
         sigma_prime(5, col) = sigma(5, col) + noise_wy * dt; // Angular velocity y component
         sigma_prime(6, col) = sigma(6, col) + noise_wz * dt; // Angular velocity z component
     }
+
+    printf("Sigma Prime\n");
+    for (uint16_t row = 0; row < STATE_SIZE; ++row)
+    {
+        for (uint16_t col = 0; col < 2*STATE_SIZE+1; ++col)
+        {
+            printf("%d, ", sigma_prime(row,col));
+        }
+        printf("\n");
+    }
+
     predicted_sigma_ = sigma_prime;
 
     // PREDICT STATE VECTOR

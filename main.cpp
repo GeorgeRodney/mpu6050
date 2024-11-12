@@ -26,6 +26,7 @@ int main()
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
     operate_indicator_.set(false);
+    sleep_ms(10000);
 
     imu mpu6050_(GPIO_4, GPIO_5, i2c_default, MPU_ADDRESS);
     
@@ -65,7 +66,7 @@ int main()
         printf("%.4d,%.4d,%.4d,%.4d\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
 
         operate_indicator_.set(false);
-        sleep_ms(1000);
+        sleep_ms(3000);
     }
 
 }
