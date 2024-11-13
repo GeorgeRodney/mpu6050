@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 
 # Initialise pico_sdk from installed location
@@ -34,7 +34,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(accel C CXX ASM)
+project(UKF C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -46,23 +46,23 @@ include_directories(inc)
 
 # Add executable with source files from 'src' folder
 file(GLOB SOURCES "src/*.cpp")
-add_executable(accel main.cpp ${SOURCES})
+add_executable(UKF main.cpp ${SOURCES})
 
 # pull in common dependencies
-target_link_libraries(accel pico_stdlib
+target_link_libraries(UKF pico_stdlib
                             hardware_pwm
                             hardware_i2c
                     )
 
-pico_enable_stdio_usb(accel 1)
-pico_enable_stdio_uart(accel 0)
+pico_enable_stdio_usb(UKF 1)
+pico_enable_stdio_uart(UKF 0)
 
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(accel)
+pico_add_extra_outputs(UKF)
 
-target_include_directories(accel PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_include_directories(UKF PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 # Disable annoying cmake warning
 # Disable specific warning in GCC
-target_compile_options(accel PRIVATE -Wno-psabi)
+target_compile_options(UKF PRIVATE -Wno-psabi)
 

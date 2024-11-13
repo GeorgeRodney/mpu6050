@@ -12,11 +12,6 @@
 #define OPERATE_GPIO 16
 #define MPU_ADDRESS 0x68
 
-double get_time()
-{
-    return time_us_64() / 1e6;
-}
-
 int main()
 {
     stdio_init_all();
@@ -42,14 +37,14 @@ int main()
     // SETUP
     mpu6050_.calibrate_gyroscope();
     ukfFilter_.calcWeights();
-    ukfFilter_.currentTime_ = get_time();
+    ukfFilter_.currentTime_ = 0.0;
 
     while(true)
     {
         // What time is it
         operate_indicator_.set(true);
         ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
-        ukfFilter_.currentTime_ = get_time();
+        ukfFilter_.currentTime_ = 1.0;
         ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
 
         // Predict State Forward DT
