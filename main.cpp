@@ -37,15 +37,25 @@ int main()
     // SETUP
     mpu6050_.calibrate_gyroscope();
     ukfFilter_.calcWeights();
-    ukfFilter_.currentTime_ = 0.0;
+    bool firstTimeIn = true;
 
     while(true)
     {
+        if (true == firstTimeIn)
+        {
+            ukfFilter_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
+            firstTimeIn = false;
+        }
         // What time is it
         operate_indicator_.set(true);
-        ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
-        ukfFilter_.currentTime_ = 1.0;
-        ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
+        // ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
+        // ukfFilter_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
+        // ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
+        ukfFilter_.dt_ = 0.025;
+
+        printf("last time   : %f\n", ukfFilter_.lastTime_);
+        printf("current time: %f\n", ukfFilter_.currentTime_);
+        printf("delta time  : %f\n", ukfFilter_.dt_);
 
         // Predict State Forward DT
         ukfFilter_.predict(ukfFilter_.dt_);
@@ -58,10 +68,10 @@ int main()
         // Update State
         ukfFilter_.update();
 
-        printf("%.4d,%.4d,%.4d,%.4d\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
+        printf("%.4f,%.4f,%.4f,%.4f\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
 
         operate_indicator_.set(false);
-        sleep_ms(3000);
+        sleep_ms(10);
     }
 
 }
