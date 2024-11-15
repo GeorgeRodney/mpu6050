@@ -23,12 +23,12 @@ filterEKF::filterEKF():
     Q_(1,1) = 10e-5f;
     Q_(2,2) = 10e-5f;
     Q_(3,3) = 10e-5f;
-    Q_(4,4) = 10e-3f;
-    Q_(5,5) = 10e-3f;
-    Q_(6,6) = 10e-3f;
-    Q_(7,7) = 10e-2f;
-    Q_(8,8) = 10e-2f;
-    Q_(9,9) = 10e-2f;
+    Q_(4,4) = 10e-5f;
+    Q_(5,5) = 10e-5f;
+    Q_(6,6) = 10e-5f;
+    Q_(7,7) = 10e-6f;
+    Q_(8,8) = 10e-6f;
+    Q_(9,9) = 10e-6f;
 
     H_(0, 4) = 1.0f;
     H_(1, 5) = 1.0f;
@@ -112,5 +112,12 @@ void filterEKF::update()
     K_ = predCovariance_ * H_.transpose() * S.inverse();
 
     estState_ = predState_ + K_ * innovation_;
+    Eigen::Quaterniond normalizeQuat(estState_(0), estState_(1), estState_(2), estState_(3));
+    normalizeQuat.normalize();
+    estState_(0) = normalizeQuat.w();
+    estState_(1) = normalizeQuat.x();
+    estState_(2) = normalizeQuat.y();
+    estState_(3) = normalizeQuat.z();
+
     estCovariance_ = (Eigen::MatrixXf::Identity(STATE_SIZE_EKF,STATE_SIZE_EKF) - K_ * H_) * predCovariance_;
 }

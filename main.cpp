@@ -61,7 +61,7 @@ int main()
         printf("%.4f,%.4f,%.4f,%.4f\n", filterEKF_.estState_(0), filterEKF_.estState_(1), filterEKF_.estState_(2), filterEKF_.estState_(3));
 
         operate_indicator_.set(false);
-        sleep_ms(25);
+        sleep_ms(32);
     }
 
 }
