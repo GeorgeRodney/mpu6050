@@ -38,17 +38,11 @@ int main()
 
     while(true)
     {
-        if (true == firstTimeIn)
-        {
-            filterEKF_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
-            firstTimeIn = false;
-        }
         // What time is it
         operate_indicator_.set(true);
-        // filterUKF_.lastTime_ = filterUKF_.currentTime_;
-        // filterUKF_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
-        // filterUKF_.dt_ = filterUKF_.currentTime_ - filterUKF_.lastTime_;
-        filterEKF_.dt_ = 0.025;
+        filterEKF_.lastTime_ = filterEKF_.currentTime_;
+        filterEKF_.currentTime_ = static_cast<float>(time_us_64() / 1000000.0);
+        filterEKF_.dt_ = filterEKF_.currentTime_ - filterEKF_.lastTime_;
 
         printf("last time   : %f\n", filterEKF_.lastTime_);
         printf("current time: %f\n", filterEKF_.currentTime_);
