@@ -68,7 +68,12 @@ void filterEKF::predict(float dt)
                 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0, 0.0, 1.0;
 
-    // Predict state forward
+    // >----------------------------------------------------
+    //  Process Model 
+    //  qPred = qEst * qDelta.
+    //  wPred = wEst + aEst*dt.
+    //  aPred = aEst.
+    // >----------------------------------------------------
     Eigen::Quaterniond deltaQuat;
     deltaQuat.w() = 1.0;
     deltaQuat.x() = 0.5 * (w0 * dt + 0.5 * a0 * dt * dt);
@@ -93,7 +98,12 @@ void filterEKF::predict(float dt)
     predState_(8) = a1;
     predState_(9) = a2;
 
-    // Propogate Covariance Forward
+    // >----------------------------------------------------
+    //  Predict Covariance.
+    //
+    //  P(k|k-1) = J(k) * P(k-1|k-1) * J(k).transpose() + Q()
+    //
+    // >----------------------------------------------------
     predCovariance_ = jacobian_ * estCovariance_ * jacobian_.transpose() + Q_;
 }
 
@@ -106,11 +116,22 @@ void filterEKF::calculateInnovation(const float gyroMeasIn[3])
 
 void filterEKF::update()
 {
-    // Calculate Measurment Covariance
+    // >------------------------------------------------------------
+    //  Kalman Gain.
+    //  
+    //  K(k) = P(k|k-1) * H.transpose() * [H * P(k|k-1) * H.transpose() + R].inverse()
+    // 
+    // >------------------------------------------------------------
     Eigen::MatrixXf S = H_ * predCovariance_ * H_.transpose() + R_;
 
     K_ = predCovariance_ * H_.transpose() * S.inverse();
 
+    // >------------------------------------------------------------
+    //  Update Estimate.
+    //  
+    //  X(k|k) = X(k|k-1) + K(k) * innovation(k)
+    //  
+    // >------------------------------------------------------------
     estState_ = predState_ + K_ * innovation_;
     Eigen::Quaterniond normalizeQuat(estState_(0), estState_(1), estState_(2), estState_(3));
     normalizeQuat.normalize();
@@ -119,5 +140,11 @@ void filterEKF::update()
     estState_(2) = normalizeQuat.y();
     estState_(3) = normalizeQuat.z();
 
+    // >------------------------------------------------------------
+    //  Update Covariance.
+    //  
+    //  P(k|k) = [I - K(k) * H.transpose()] * P(k|k-1)
+    //  
+    // >------------------------------------------------------------
     estCovariance_ = (Eigen::MatrixXf::Identity(STATE_SIZE_EKF,STATE_SIZE_EKF) - K_ * H_) * predCovariance_;
 }
