@@ -1,17 +1,15 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <random>
+#include "TrkUtility.hpp"
 
-#define STATE_SIZE 7
-#define MEAS_SIZE 3
-
-class OrientationFilter
+class filterUKF
 {
     public:
 
-    OrientationFilter();
+    filterUKF();
 
-    ~OrientationFilter();
+    ~filterUKF();
 
     void predict(double dt);
     void predictMeasurement();

@@ -1,11 +1,9 @@
 #include "led.hpp"
 #include "MPU6050.hpp"
 #include "hardware/timer.h"
-#include "OrientationFilter.hpp"
+#include "filterEKF.hpp"
 #include <stdio.h>
-#include <cstdlib>
 
-// int i2c_write_blocking (i2c_inst_t *i2c, uint8_t addr, const uint8_t *src, size_t len, bool nostop)
 #define GPIO_4 PICO_DEFAULT_I2C_SDA_PIN
 #define GPIO_5 PICO_DEFAULT_I2C_SCL_PIN
 #define ERROR_GPIO 15
@@ -16,7 +14,7 @@ int main()
 {
     stdio_init_all();
 
-    OrientationFilter ukfFilter_;
+    filterEKF filterEKF_;
 
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
@@ -36,42 +34,40 @@ int main()
 
     // SETUP
     mpu6050_.calibrate_gyroscope();
-    ukfFilter_.calcWeights();
     bool firstTimeIn = true;
 
     while(true)
     {
         if (true == firstTimeIn)
         {
-            ukfFilter_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
+            filterEKF_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
             firstTimeIn = false;
         }
         // What time is it
         operate_indicator_.set(true);
-        // ukfFilter_.lastTime_ = ukfFilter_.currentTime_;
-        // ukfFilter_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
-        // ukfFilter_.dt_ = ukfFilter_.currentTime_ - ukfFilter_.lastTime_;
-        ukfFilter_.dt_ = 0.025;
+        // filterUKF_.lastTime_ = filterUKF_.currentTime_;
+        // filterUKF_.currentTime_ = static_cast<double>(time_us_64() / 1000000.0);
+        // filterUKF_.dt_ = filterUKF_.currentTime_ - filterUKF_.lastTime_;
+        filterEKF_.dt_ = 0.025;
 
-        printf("last time   : %f\n", ukfFilter_.lastTime_);
-        printf("current time: %f\n", ukfFilter_.currentTime_);
-        printf("delta time  : %f\n", ukfFilter_.dt_);
+        printf("last time   : %f\n", filterEKF_.lastTime_);
+        printf("current time: %f\n", filterEKF_.currentTime_);
+        printf("delta time  : %f\n", filterEKF_.dt_);
 
         // Predict State Forward DT
-        ukfFilter_.predict(ukfFilter_.dt_);
-        ukfFilter_.predictMeasurement();
+        filterEKF_.predict(filterEKF_.dt_);
         operate_indicator_.set(true);
         // Measure and innovate
         mpu6050_.read_gyroscope();
-        ukfFilter_.calculateInnovation(mpu6050_.gyroData_);
+        filterEKF_.calculateInnovation(mpu6050_.gyroData_);
 
         // Update State
-        ukfFilter_.update();
+        filterEKF_.update();
 
-        printf("%.4f,%.4f,%.4f,%.4f\n", ukfFilter_.est_State_(0), ukfFilter_.est_State_(1), ukfFilter_.est_State_(2), ukfFilter_.est_State_(3));
+        printf("%.4f,%.4f,%.4f,%.4f\n", filterEKF_.estState_(0), filterEKF_.estState_(1), filterEKF_.estState_(2), filterEKF_.estState_(3));
 
         operate_indicator_.set(false);
-        sleep_ms(10);
+        sleep_ms(25);
     }
 
 }

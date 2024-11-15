@@ -1,0 +1,10 @@
+#ifndef TRACK_UTILITY_HPP
+#define TRACK_UTILITY_HPP
+
+#define STATE_SIZE_EKF 10
+#define STATE_SIZE_UKF 7
+#define MEAS_SIZE_EKF 3
+#define MEAS_SIZE_UKF 3
+#define MEAS_VARIANCE 1.0f
+
+#endif // TRACK_UTILITY_HPP
