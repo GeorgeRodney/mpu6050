@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "hardware/timer.h"
 #include <Eigen/Dense>
+#include <cmath>
 
 class imu
 {   
@@ -93,6 +94,7 @@ public:
         {
             gyroData_[i] = -(float)temp[i] / 131;
             gyroData_[i] = gyroData_[i] - gyroOffset_[i];
+            gyroData_[i] = gyroData_[i] * (M_PI / 180.0); // Convert to radians / sec
         }
     }
 

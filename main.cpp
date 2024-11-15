@@ -1,7 +1,8 @@
 #include "led.hpp"
 #include "MPU6050.hpp"
 #include "hardware/timer.h"
-#include "filterEKF.hpp"
+// #include "filterEKF.hpp"
+#include "filterUKF.hpp"
 #include <stdio.h>
 
 #define GPIO_4 PICO_DEFAULT_I2C_SDA_PIN
@@ -14,7 +15,8 @@ int main()
 {
     stdio_init_all();
 
-    filterEKF filterEKF_;
+    // filterEKF filterUKF_;
+    filterUKF filterUKF_;
 
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
@@ -34,31 +36,33 @@ int main()
 
     // SETUP
     mpu6050_.calibrate_gyroscope();
+    filterUKF_.calcWeights();
     bool firstTimeIn = true;
 
     while(true)
     {
         // What time is it
         operate_indicator_.set(true);
-        filterEKF_.lastTime_ = filterEKF_.currentTime_;
-        filterEKF_.currentTime_ = static_cast<float>(time_us_64() / 1000000.0);
-        filterEKF_.dt_ = filterEKF_.currentTime_ - filterEKF_.lastTime_;
+        filterUKF_.lastTime_ = filterUKF_.currentTime_;
+        filterUKF_.currentTime_ = static_cast<float>(time_us_64() / 1000000.0);
+        // filterUKF_.dt_ = filterUKF_.currentTime_ - filterUKF_.lastTime_;
+        filterUKF_.dt_ = 0.025;
 
-        printf("last time   : %f\n", filterEKF_.lastTime_);
-        printf("current time: %f\n", filterEKF_.currentTime_);
-        printf("delta time  : %f\n", filterEKF_.dt_);
+        // printf("last time   : %f\n", filterUKF_.lastTime_);
+        // printf("current time: %f\n", filterUKF_.currentTime_);
+        // printf("delta time  : %f\n", filterUKF_.dt_);
 
         // Predict State Forward DT
-        filterEKF_.predict(filterEKF_.dt_);
+        filterUKF_.predict(filterUKF_.dt_);
         operate_indicator_.set(true);
         // Measure and innovate
         mpu6050_.read_gyroscope();
-        filterEKF_.calculateInnovation(mpu6050_.gyroData_);
+        filterUKF_.calculateInnovation(mpu6050_.gyroData_);
 
         // Update State
-        filterEKF_.update();
+        filterUKF_.update();
 
-        printf("%.4f,%.4f,%.4f,%.4f\n", filterEKF_.estState_(0), filterEKF_.estState_(1), filterEKF_.estState_(2), filterEKF_.estState_(3));
+        printf("%.4f,%.4f,%.4f,%.4f\n", filterUKF_.estState_(0), filterUKF_.estState_(1), filterUKF_.estState_(2), filterUKF_.estState_(3));
 
         operate_indicator_.set(false);
         sleep_ms(32);

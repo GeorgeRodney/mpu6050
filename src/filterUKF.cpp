@@ -2,11 +2,11 @@
 
 
 filterUKF::filterUKF():
-    pred_State_(7),
-    est_State_(7),
+    predState_(7),
+    estState_(7),
     innovation_(3),
-    pred_Var_(Eigen::MatrixXd::Zero(STATE_SIZE_UKF,STATE_SIZE_UKF)),
-    est_Var_(Eigen::MatrixXd::Zero(STATE_SIZE_UKF,STATE_SIZE_UKF)),
+    predCovariance_(Eigen::MatrixXd::Zero(STATE_SIZE_UKF,STATE_SIZE_UKF)),
+    estCovariance_(Eigen::MatrixXd::Zero(STATE_SIZE_UKF,STATE_SIZE_UKF)),
     innovation_Var_(Eigen::MatrixXd::Zero(MEAS_SIZE_UKF,MEAS_SIZE_UKF)),
     pred_Meas_(7),
     est_Meas_(7),
@@ -25,21 +25,21 @@ filterUKF::filterUKF():
     angular_velocity_noise_stddev(std::sqrt(angular_velocity_noise_var)),
     measurement_noise_matrix_(Eigen::MatrixXd::Zero(MEAS_SIZE_UKF,MEAS_SIZE_UKF))
 {
-    pred_Var_(0,0) = 0.1;
-    pred_Var_(1,1) = 0.1;
-    pred_Var_(2,2) = 0.1;
-    pred_Var_(3,3) = 0.1;
-    pred_Var_(4,4) = 1;
-    pred_Var_(5,5) = 1;
-    pred_Var_(6,6) = 1;
+    predCovariance_(0,0) = 0.1;
+    predCovariance_(1,1) = 0.1;
+    predCovariance_(2,2) = 0.1;
+    predCovariance_(3,3) = 0.1;
+    predCovariance_(4,4) = 1;
+    predCovariance_(5,5) = 1;
+    predCovariance_(6,6) = 1;
 
-    est_Var_(0,0) = 0.1;
-    est_Var_(1,1) = 0.1;
-    est_Var_(2,2) = 0.1;
-    est_Var_(3,3) = 0.1;
-    est_Var_(4,4) = 1;
-    est_Var_(5,5) = 1;
-    est_Var_(6,6) = 1;
+    estCovariance_(0,0) = 0.1;
+    estCovariance_(1,1) = 0.1;
+    estCovariance_(2,2) = 0.1;
+    estCovariance_(3,3) = 0.1;
+    estCovariance_(4,4) = 1;
+    estCovariance_(5,5) = 1;
+    estCovariance_(6,6) = 1;
 
     std::normal_distribution<double> noise_dist(0.0, angular_velocity_noise_stddev);
 
@@ -47,8 +47,8 @@ filterUKF::filterUKF():
     measurement_noise_matrix_(1,1) = angular_velocity_noise_var;
     measurement_noise_matrix_(2,2) = angular_velocity_noise_var;
 
-    pred_State_ << 0, 1, 0, 0, 0, 0, 0;
-    est_State_ << 0, 1, 0, 0, 0, 0, 0;
+    predState_ << 0, 1, 0, 0, 0, 0, 0;
+    estState_ << 0, 1, 0, 0, 0, 0, 0;
 }
 
 void filterUKF::predict(double dt)
@@ -59,17 +59,17 @@ void filterUKF::predict(double dt)
     Eigen::Quaterniond deltaQ;
     Eigen::Quaterniond newQ;
 
-    Eigen::MatrixXd sqrt_P = est_Var_.llt().matrixL();
+    Eigen::MatrixXd sqrt_P = estCovariance_.llt().matrixL();
 
     double scaleFactor = std::sqrt(STATE_SIZE_UKF + lambda_);   
 
     // GENERATE SIGMA POINTS
-    sigma.col(0) = est_State_; 
+    sigma.col(0) = estState_; 
     for (uint16_t posIdx = 1; posIdx <= STATE_SIZE_UKF; ++posIdx)
     {   
         for (uint16_t row = 0; row < STATE_SIZE_UKF; ++row)
         {
-            sigma(row, posIdx) = est_State_(row) + scaleFactor * sqrt_P(row, row);
+            sigma(row, posIdx) = estState_(row) + scaleFactor * sqrt_P(row, row);
             // printf("sigma(%d,%d): %f", row, posIdx, sigma(row, posIdx));
             // printf("\n");
         }
@@ -79,7 +79,7 @@ void filterUKF::predict(double dt)
     {
         for (uint16_t row = 0; row < STATE_SIZE_UKF; ++row)
         {
-            sigma(row, negIdx) = est_State_(row) - scaleFactor * sqrt_P(row, row);
+            sigma(row, negIdx) = estState_(row) - scaleFactor * sqrt_P(row, row);
             // printf("sigma(%d,%d): %f", row, negIdx, sigma(row, negIdx)); 
             // printf("\n");  
         }
@@ -96,10 +96,10 @@ void filterUKF::predict(double dt)
     // }
 
     // PROPOGATE SIGMA THROUGH TRANSFORM
-    estQuat.w() = est_State_(0);
-    estQuat.x() = est_State_(1);
-    estQuat.y() = est_State_(2);
-    estQuat.z() = est_State_(3);
+    estQuat.w() = estState_(0);
+    estQuat.x() = estState_(1);
+    estQuat.y() = estState_(2);
+    estQuat.z() = estState_(3);
 
     for (uint16_t col = 0; col < (2*STATE_SIZE_UKF+1); ++col)
     {
@@ -117,17 +117,21 @@ void filterUKF::predict(double dt)
         sigma_prime.col(col)(2) = newQ.y();
         sigma_prime.col(col)(3) = newQ.z();
 
-        double noise_wx = noise_dist(gen);
-        double noise_wy = noise_dist(gen);
-        double noise_wz = noise_dist(gen);
+        // double noise_wx = noise_dist(gen);
+        // double noise_wy = noise_dist(gen);
+        // double noise_wz = noise_dist(gen);
 
-        printf("W process noise - wx: %f, wy: %f, wz: %f\n", noise_wx, noise_wy, noise_wz);
+        // printf("W process noise - wx: %f, wy: %f, wz: %f\n", noise_wx, noise_wy, noise_wz);
 
-        sigma_prime(4, col) = sigma(4, col) + noise_wx * dt; // Angular velocity x component
-        sigma_prime(5, col) = sigma(5, col) + noise_wy * dt; // Angular velocity y component
-        sigma_prime(6, col) = sigma(6, col) + noise_wz * dt; // Angular velocity z component
+        // sigma_prime(4, col) = sigma(4, col) + noise_wx * dt; // Angular velocity x component
+        // sigma_prime(5, col) = sigma(5, col) + noise_wy * dt; // Angular velocity y component
+        // sigma_prime(6, col) = sigma(6, col) + noise_wz * dt; // Angular velocity z component
 
-        printf("W - wx: %f, wy: %f, wz: %f\n", sigma_prime(4,col), sigma_prime(5,col), sigma_prime(6,col));
+        sigma_prime(4, col) = sigma(4, col); // Angular velocity x component
+        sigma_prime(5, col) = sigma(5, col); // Angular velocity y component
+        sigma_prime(6, col) = sigma(6, col); // Angular velocity z component
+
+        // printf("W - wx: %f, wy: %f, wz: %f\n", sigma_prime(4,col), sigma_prime(5,col), sigma_prime(6,col));
     }
 
     // printf("Sigma Prime\n");
@@ -140,25 +144,26 @@ void filterUKF::predict(double dt)
     //     printf("\n");
     // }
 
+
     predicted_sigma_ = sigma_prime;
 
     // PREDICT STATE VECTOR
-    pred_State_.setZero();
+    predState_.setZero();
     for (uint16_t sigmaIdx = 0; sigmaIdx < (2*STATE_SIZE_UKF+1); ++sigmaIdx)
     {
-        pred_State_ += W_mean_(sigmaIdx) * sigma_prime.col(sigmaIdx);
+        predState_ += W_mean_(sigmaIdx) * sigma_prime.col(sigmaIdx);
     }
-    pred_State_.head(4).normalize();
-    printf("pred state: %f, %f, %f, %f, %f, %f, %f\n", pred_State_(0), pred_State_(1), pred_State_(2), 
-                                                                            pred_State_(3), pred_State_(4),
-                                                                                pred_State_(5), pred_State_(6));
+    predState_.head(4).normalize();
+    // printf("pred state: %f, %f, %f, %f, %f, %f, %f\n", predState_(0), predState_(1), predState_(2), 
+    //                                                                         predState_(3), predState_(4),
+    //                                                                             predState_(5), predState_(6));
 
     // PREDICT COVARIANCE MATRIX
-    pred_Var_.setZero();
+    predCovariance_.setZero();
     for (int idx = 0; idx < 15; ++idx)
     {
-        Eigen::VectorXd diff = sigma_prime.col(idx) - pred_State_;
-        pred_Var_ += W_cov_(idx) * (diff * diff.transpose());
+        Eigen::VectorXd diff = sigma_prime.col(idx) - predState_;
+        predCovariance_ += W_cov_(idx) * (diff * diff.transpose());
     }
 }
 
@@ -173,17 +178,17 @@ void filterUKF::predictMeasurement()
     Eigen::MatrixXd sigma(Eigen::MatrixXd::Zero(STATE_SIZE_UKF,15));
     Eigen::MatrixXd sigma_prime(Eigen::MatrixXd::Zero(MEAS_SIZE_UKF,15));
         
-    Eigen::MatrixXd sqrt_P = pred_Var_.llt().matrixL();
+    Eigen::MatrixXd sqrt_P = predCovariance_.llt().matrixL();
 
     double scaleFactor = std::sqrt(STATE_SIZE_UKF + lambda_);   
 
     // GENERATE SIGMA POINTS
-    sigma.col(0) = pred_State_; 
+    sigma.col(0) = predState_; 
     for (uint16_t posIdx = 1; posIdx <= STATE_SIZE_UKF; ++posIdx)
     {   
         for (uint16_t row = 0; row < STATE_SIZE_UKF; ++row)
         {
-            sigma(row, posIdx) = pred_State_(row) + scaleFactor * sqrt_P(row, row);
+            sigma(row, posIdx) = predState_(row) + scaleFactor * sqrt_P(row, row);
             // printf("sigma(%d,%d): %f", row, posIdx, sigma(row, posIdx));
             // printf("\n");
         }
@@ -193,7 +198,7 @@ void filterUKF::predictMeasurement()
     {
         for (uint16_t row = 0; row < STATE_SIZE_UKF; ++row)
         {
-            sigma(row, negIdx) = pred_State_(row) - scaleFactor * sqrt_P(row, row);
+            sigma(row, negIdx) = predState_(row) - scaleFactor * sqrt_P(row, row);
             // printf("sigma(%d,%d): %f", row, negIdx, sigma(row, negIdx)); 
             // printf("\n");  
         }
@@ -240,7 +245,7 @@ void filterUKF::update()
     state_meas_cov_.setZero();
     for (int idx = 0; idx < 15; ++idx)
     {   
-        Eigen::VectorXd diffState = predicted_sigma_.col(idx) - pred_State_;
+        Eigen::VectorXd diffState = predicted_sigma_.col(idx) - predState_;
         Eigen::VectorXd diffMeas = measurement_sigma_.col(idx) - pred_Meas_;
         state_meas_cov_ += W_cov_(idx) * (diffState * diffMeas.transpose());
     }
@@ -258,15 +263,15 @@ void filterUKF::update()
     K = state_meas_cov_ * measurement_Var_.inverse();
     
     // X(+) = X(-) + K * innovation
-    est_State_ = pred_State_ + K * innovation_;
-    est_State_.head(4).normalize();
+    estState_ = predState_ + K * innovation_;
+    estState_.head(4).normalize();
 
     // P(+) = P(-) - K * S * K_t
-    est_Var_ = pred_Var_ - K * measurement_Var_ *  K.transpose();
+    estCovariance_ = predCovariance_ - K * measurement_Var_ *  K.transpose();
 
-    printf("est_State_: %f, %f, %f, %f, %f, %f, %f\n", est_State_(0), est_State_(1), est_State_(2), 
-                                                                        est_State_(3), est_State_(4),
-                                                                            est_State_(5), est_State_(6));
+    // printf("estState_: %f, %f, %f, %f, %f, %f, %f\n", estState_(0), estState_(1), estState_(2), 
+    //                                                                     estState_(3), estState_(4),
+    //                                                                         estState_(5), estState_(6));
 }
 
 void filterUKF::calcWeights()
@@ -277,7 +282,7 @@ void filterUKF::calcWeights()
 
     // Calculate lambda
     lambda_ = alpha * alpha * (STATE_SIZE_UKF + kappa) - STATE_SIZE_UKF;
-    printf("lambda: %f\n", lambda_);
+    // printf("lambda: %f\n", lambda_);
 
     // Compute weights
     W_mean_(0) = lambda_ / (STATE_SIZE_UKF + lambda_);
@@ -286,6 +291,6 @@ void filterUKF::calcWeights()
     for (int i = 1; i < 2 * STATE_SIZE_UKF + 1; ++i) {
         W_mean_(i) = 1.0 / (2 * (STATE_SIZE_UKF + lambda_));
         W_cov_(i) = 1.0 / (2 * (STATE_SIZE_UKF + lambda_));
-        printf("W_mean: %f\n", W_mean_(i));
+        // printf("W_mean: %f\n", W_mean_(i));
     }
 }

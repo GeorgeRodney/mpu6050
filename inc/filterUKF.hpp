@@ -17,11 +17,11 @@ class filterUKF
     void update();
     void calcWeights();
 
-    Eigen::VectorXd pred_State_;
-    Eigen::VectorXd est_State_;
+    Eigen::VectorXd predState_;
+    Eigen::VectorXd estState_;
     Eigen::VectorXd innovation_;
-    Eigen::MatrixXd pred_Var_;
-    Eigen::MatrixXd est_Var_;
+    Eigen::MatrixXd predCovariance_;
+    Eigen::MatrixXd estCovariance_;
     Eigen::MatrixXd innovation_Var_;       
     Eigen::VectorXd pred_Meas_;
     Eigen::VectorXd est_Meas_;

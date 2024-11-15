@@ -15,8 +15,8 @@ filterEKF::filterEKF():
     lastTime_(0.0f),
     dt_(0.0f)
 {
-    predState_ << 0.0f, 1.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f;
-    estState_  << 0.0f, 1.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f;
+    predState_  << 1.0f, 0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f;
+    estState_   << 1.0f, 0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f;
     innovation_ << 0.0f, 0.0f, 0.0f;
 
     Q_(0,0) = 10e-5f;
@@ -112,6 +112,10 @@ void filterEKF::calculateInnovation(const float gyroMeasIn[3])
     innovation_(0) = gyroMeasIn[0] - predState_(4);
     innovation_(1) = gyroMeasIn[1] - predState_(5);
     innovation_(2) = gyroMeasIn[2] - predState_(6);
+
+    float magDiff = std::sqrt(std::pow(innovation_(0),2) + std::pow(innovation_(1),2) + std::pow(innovation_(2),2));
+
+    printf("Innovation differance: %f\n", magDiff);
 }
 
 void filterEKF::update()
