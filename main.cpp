@@ -4,6 +4,7 @@
 // #include "filterEKF.hpp"
 #include "filterUKF.hpp"
 #include <stdio.h>
+#include "Wifi.hpp"
 
 #define GPIO_4 PICO_DEFAULT_I2C_SDA_PIN
 #define GPIO_5 PICO_DEFAULT_I2C_SCL_PIN
@@ -14,6 +15,10 @@
 int main()
 {
     stdio_init_all();
+
+    // WIFI
+    WIFI wifi_;
+    wifi_.connect_to_wifi();
 
     // filterEKF filterUKF_;
     filterUKF filterUKF_;

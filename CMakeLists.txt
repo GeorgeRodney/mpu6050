@@ -31,41 +31,51 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
-include(pico_sdk_import.cmake)
+include(/home/michael/pico-sdk/external/pico_sdk_import.cmake)
+set(PICO_EXTRAS_PATH /home/michael/pico-extras)
+include(${PICO_EXTRAS_PATH}/external/pico_extras_import.cmake)
 
-project(UKF C CXX ASM)
+
+project(QuatFilter C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add the include directory
-include_directories(inc)
+include_directories(inc
+                    Wifi)
 
 # Add executable. Default name is the project name, version 0.1
 
 # Add executable with source files from 'src' folder
-file(GLOB SOURCES "src/*.cpp")
-add_executable(UKF main.cpp ${SOURCES})
+file(GLOB SOURCES "src/*.cpp" "Wifi/*.cpp")
+add_executable(QuatFilter main.cpp ${SOURCES})
 
 # pull in common dependencies
-target_link_libraries(UKF pico_stdlib
+target_link_libraries(QuatFilter pico_stdlib
                             hardware_pwm
                             hardware_i2c
+                            cyw43_driver
+                            lwip
                     )
 
-pico_enable_stdio_usb(UKF 1)
-pico_enable_stdio_uart(UKF 0)
+pico_enable_stdio_usb(QuatFilter 1)
+pico_enable_stdio_uart(QuatFilter 0)
 
 # Enable debugging
-target_compile_definitions(UKF PRIVATE PICO_DEBUG)
+target_compile_definitions(QuatFilter PRIVATE PICO_DEBUG)
 
 
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(UKF)
+pico_add_extra_outputs(QuatFilter)
 
-target_include_directories(UKF PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_include_directories(QuatFilter PRIVATE ${EIGEN3_INCLUDE_DIR})
+
+target_link_libraries(QuatFilter pico_stdlib pico_cyw43_arch_lwip_threadsafe_background)
+
+
 
 # Disable annoying cmake warning
 # Disable specific warning in GCC
-target_compile_options(UKF PRIVATE -Wno-psabi)
+target_compile_options(QuatFilter PRIVATE -Wno-psabi)
 
