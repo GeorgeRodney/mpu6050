@@ -47,8 +47,8 @@ filterUKF::filterUKF():
     measurement_noise_matrix_(1,1) = angular_velocity_noise_var;
     measurement_noise_matrix_(2,2) = angular_velocity_noise_var;
 
-    predState_ << 0, 1, 0, 0, 0, 0, 0;
-    estState_ << 0, 1, 0, 0, 0, 0, 0;
+    predState_ << 1, 0, 0, 0, 0, 0, 0;
+    estState_  << 1, 0, 0, 0, 0, 0, 0;
 }
 
 void filterUKF::predict(double dt)

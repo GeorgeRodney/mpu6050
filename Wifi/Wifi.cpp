@@ -1,12 +1,13 @@
-#include "Wifi.hpp"
+#include <stdio.h>
+#include "pico/cyw43_arch.h" // Required for Wi-Fi functions
 
 class WIFI
 {
 
     public:
-        WIFI()
+        WIFI();
 
-        ~WIFI()
+        ~WIFI();
         const char *SSID = "SETUP-1D9B";
         const char *PASSWORD = "coast9460animal";
         const char *SERVER_IP = "127.0.0.1";
@@ -28,4 +29,4 @@ class WIFI
 
             printf("Connected to SETUP-1D9B!\n");
         }
-}
+};

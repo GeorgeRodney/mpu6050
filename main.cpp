@@ -1,10 +1,10 @@
 #include "led.hpp"
 #include "MPU6050.hpp"
 #include "hardware/timer.h"
-// #include "filterEKF.hpp"
-#include "filterUKF.hpp"
+#include "filterEKF.hpp"
+// #include "filterUKF.hpp"
 #include <stdio.h>
-#include "Wifi.hpp"
+// #include "Wifi.hpp"
 
 #define GPIO_4 PICO_DEFAULT_I2C_SDA_PIN
 #define GPIO_5 PICO_DEFAULT_I2C_SCL_PIN
@@ -16,12 +16,7 @@ int main()
 {
     stdio_init_all();
 
-    // WIFI
-    WIFI wifi_;
-    wifi_.connect_to_wifi();
-
-    // filterEKF filterUKF_;
-    filterUKF filterUKF_;
+    filterEKF filter_;
 
     led operate_indicator_(OPERATE_GPIO);
     led error_indicator_(ERROR_GPIO);
@@ -41,33 +36,32 @@ int main()
 
     // SETUP
     mpu6050_.calibrate_gyroscope();
-    filterUKF_.calcWeights();
     bool firstTimeIn = true;
 
     while(true)
     {
         // What time is it
         operate_indicator_.set(true);
-        filterUKF_.lastTime_ = filterUKF_.currentTime_;
-        filterUKF_.currentTime_ = static_cast<float>(time_us_64() / 1000000.0);
-        // filterUKF_.dt_ = filterUKF_.currentTime_ - filterUKF_.lastTime_;
-        filterUKF_.dt_ = 0.025;
+        filter_.lastTime_ = filter_.currentTime_;
+        filter_.currentTime_ = static_cast<float>(time_us_64() / 1000000.0);
+        filter_.dt_ = filter_.currentTime_ - filter_.lastTime_;
+        // filter_.dt_ = 0.025;
 
-        // printf("last time   : %f\n", filterUKF_.lastTime_);
-        // printf("current time: %f\n", filterUKF_.currentTime_);
-        // printf("delta time  : %f\n", filterUKF_.dt_);
+        // printf("last time   : %f\n", filter_.lastTime_);
+        // printf("current time: %f\n", filter_.currentTime_);
+        // printf("delta time  : %f\n", filter_.dt_);
 
         // Predict State Forward DT
-        filterUKF_.predict(filterUKF_.dt_);
+        filter_.predict(filter_.dt_);
         operate_indicator_.set(true);
         // Measure and innovate
         mpu6050_.read_gyroscope();
-        filterUKF_.calculateInnovation(mpu6050_.gyroData_);
+        filter_.calculateInnovation(mpu6050_.gyroData_);
 
         // Update State
-        filterUKF_.update();
+        filter_.update();
 
-        printf("%.4f,%.4f,%.4f,%.4f\n", filterUKF_.estState_(0), filterUKF_.estState_(1), filterUKF_.estState_(2), filterUKF_.estState_(3));
+        printf("%.4f,%.4f,%.4f,%.4f\n", filter_.estState_(0), filter_.estState_(1), filter_.estState_(2), filter_.estState_(3));
 
         operate_indicator_.set(false);
         sleep_ms(32);

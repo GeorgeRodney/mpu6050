@@ -113,9 +113,9 @@ void filterEKF::calculateInnovation(const float gyroMeasIn[3])
     innovation_(1) = gyroMeasIn[1] - predState_(5);
     innovation_(2) = gyroMeasIn[2] - predState_(6);
 
-    float magDiff = std::sqrt(std::pow(innovation_(0),2) + std::pow(innovation_(1),2) + std::pow(innovation_(2),2));
+    // float magDiff = std::sqrt(std::pow(innovation_(0),2) + std::pow(innovation_(1),2) + std::pow(innovation_(2),2));
 
-    printf("Innovation differance: %f\n", magDiff);
+    // printf("Innovation differance: %f\n", magDiff);
 }
 
 void filterEKF::update()
